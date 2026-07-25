@@ -1,4 +1,5 @@
 const rl = @import("raylib");
+const std = @import("std");
 
 pub const Point = struct {
     x: f32,
@@ -21,6 +22,71 @@ pub const Framebuffer = struct {
             .texture = null,
         };
     }
+    pub fn fill_polygon_with_holes(self: *Framebuffer, contours: []const []const Point, color: rl.Color) void {
+        if (contours.len == 0) return;
+
+        var min_y: f32 = contours[0][0].y;
+        var max_y: f32 = contours[0][0].y;
+        for (contours) |contour| {
+            for (contour) |p| {
+                if (p.y < min_y) min_y = p.y;
+                if (p.y > max_y) max_y = p.y;
+            }
+        }
+
+        const y_start: i32 = @intFromFloat(@ceil(min_y));
+        const y_end: i32 = @intFromFloat(@floor(max_y));
+
+        var intersections: [256]f32 = undefined;
+
+        var y = y_start;
+        while (y <= y_end) : (y += 1) {
+            const yf: f32 = @floatFromInt(y);
+            var count: usize = 0;
+
+            // clave: se recolectan las intersecciones de TODOS los contornos
+            // (el exterior y los huecos) en la MISMA lista antes de ordenar,
+            // para que la regla par-impar los combine correctamente.
+            for (contours) |contour| {
+                for (contour, 0..) |p0, i| {
+                    const p1 = contour[(i + 1) % contour.len];
+                    if (p0.y == p1.y) continue;
+
+                    const y_min = @min(p0.y, p1.y);
+                    const y_max = @max(p0.y, p1.y);
+
+                    if (yf >= y_min and yf < y_max) {
+                        const t = (yf - p0.y) / (p1.y - p0.y);
+                        const x = p0.x + t * (p1.x - p0.x);
+                        if (count < intersections.len) {
+                            intersections[count] = x;
+                            count += 1;
+                        }
+                    }
+                }
+            }
+
+            std.mem.sort(f32, intersections[0..count], {}, std.sort.asc(f32));
+
+            var i: usize = 0;
+            while (i + 1 < count) : (i += 2) {
+                const x_start: i32 = @intFromFloat(@ceil(intersections[i]));
+                const x_end: i32 = @intFromFloat(@floor(intersections[i + 1]));
+
+                var x = x_start;
+                while (x <= x_end) : (x += 1) {
+                    if (x >= 0 and y >= 0 and x < self.width and y < self.height) {
+                        self.draw_pixel(@floatFromInt(x), @floatFromInt(y), color) catch unreachable;
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn fill_polygon(self: *Framebuffer, points: []const Point, color: rl.Color) void {
+        self.fill_polygon_with_holes(&.{points}, color);
+    }
+
     pub fn draw_polygon(self: *Framebuffer, points: []const Point, color: rl.Color) void {
         if (points.len < 2) return;
         for (points, 0..) |p, i| {
