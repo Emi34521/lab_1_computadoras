@@ -44,11 +44,11 @@ pub fn main(init: std.process.Init) !void {
     while (!rl.windowShouldClose()) {
         framebuffer.clear();
 
-        // ya NO hagas: framebuffer.fill_polygon(&polygon5, .orange);
-        framebuffer.fill_polygon(&polygon1, .red);
-        framebuffer.fill_polygon(&polygon2, .green);
-        framebuffer.fill_polygon(&polygon3, .blue);
-        framebuffer.fill_polygon_with_holes(&.{ &polygon4, &polygon5 }, .yellow);
+        // Draw polygons
+        framebuffer.fill_polygon(&polygon1, .yellow);
+        framebuffer.fill_polygon(&polygon2, .blue);
+        framebuffer.fill_polygon(&polygon3, .red);
+        framebuffer.fill_polygon_with_holes(&.{ &polygon4, &polygon5 }, .green);
 
         framebuffer.draw_polygon(&polygon1, .white);
         framebuffer.draw_polygon(&polygon2, .white);
